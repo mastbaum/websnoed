@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>websnoed</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="js/Three.js"></script>
+    <script src="js/pmtpos.js"></script>
+
+    <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="/_utils/script/jquery.couch.js"></script>
+
+		<script>
+
+      var NPMTS = pmtpos.x.length;
+      var PI2 = Math.PI * 2;
+			var container;
+
+			var camera, scene, renderer;
+
+			var cube;
+
+			var targetRotation = 0;
+			var targetRotationOnMouseDown = 0;
+
+			var mouseX = 0; mouseY = 0;
+			var mouseXOnMouseDown = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+      var ray, projector, mouse3D, isMouseDown = false, onMouseDownPosition,
+      radious = 375, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
+
+      var particles = []
+
+      var surfaceProgram = function( context ) {
+        context.beginPath();
+        context.arc( 0, 0, 1, 0, PI2, true );
+        context.closePath();
+        context.fill();
+      };
+
+      var hitMaterial = new THREE.ParticleCanvasMaterial( {
+        color: 0xff0000,
+        program: surfaceProgram
+      } );
+
+      var unhitMaterial = new THREE.ParticleCanvasMaterial( {
+        color: 0x555555,
+        program: surfaceProgram
+      } );
+
+			init();
+			render();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        var info = document.createElement( 'div' );
+        info.style.position = 'absolute';
+        info.id = 'plot1';
+        info.style.top = '10px';
+        info.style.width = '100%';
+        info.style.color = 'white';
+        info.style.textAlign = 'center';
+        container.appendChild( info );
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+        camera.position.x = 0.0; //radious;
+        camera.position.y = radious;
+        camera.position.z = 0.0;
+        camera.rotation.y = -Math.PI/2;
+        camera.updateMatrix();
+        camera.lookAt(scene.position);
+
+        scene.add( camera );
+
+        projector = new THREE.Projector();
+        onMouseDownPosition = new THREE.Vector2();
+        ray = new THREE.Ray( camera.position, null );
+
+        // Cube
+
+        var materials = [];
+        for ( var i = 0; i < 6; i ++ ) {
+          materials.push( new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+        }
+
+        cube = new THREE.Mesh( new THREE.CubeGeometry( 20, 20, 20, 1, 1, 1, materials ), new THREE.MeshFaceMaterial() );
+        cube.position.x = 0.0;
+        cube.position.y = 0.0;
+        cube.position.z = 10000.0/20;
+        scene.add( cube );
+
+        // Plane
+        var mat = new THREE.MeshLambertMaterial({color:0xff0000});
+        for ( var ipmt = 0; ipmt < NPMTS; ipmt++ ) {
+          var particle = new THREE.Particle( unhitMaterial );
+          particle.position.x = pmtpos.x[ipmt]/50;
+          particle.position.y = pmtpos.y[ipmt]/50;
+          particle.position.z = pmtpos.z[ipmt]/50;
+          scene.add( particle );
+          particles.push(particle);
+        }
+
+        renderer = new THREE.CanvasRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+        container.appendChild( renderer.domElement );
+
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+
+        document.addEventListener( 'mousewheel', onDocumentMouseWheel, false );
+      }
+
+      setInterval(function() {
+        $.couch.db('websnoed').openDoc('data', {
+          success: function(data) {
+            var pmts = data.t.length;
+            for (var i=0; i<pmts; i++) {
+              particles[i].material = (data.q[i] > 0 ? hitMaterial : unhitMaterial);
+            }
+          }
+        });
+        render();
+      }, 500);
+
+      //
+      function onDocumentMouseDown( event ) {
+
+        event.preventDefault();
+
+        isMouseDown = true;
+
+        onMouseDownTheta = theta;
+        onMouseDownPhi = phi;
+        onMouseDownPosition.x = event.clientX;
+        onMouseDownPosition.y = event.clientY;
+
+      }
+
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+
+        if ( isMouseDown ) {
+
+          theta = - ( ( event.clientX - onMouseDownPosition.x ) * 0.5 ) + onMouseDownTheta;
+          phi = ( ( event.clientY - onMouseDownPosition.y ) * 0.5 ) + onMouseDownPhi;
+
+          //phi = Math.min( 180, Math.max( 0, phi ) );
+
+          camera.position.x = radious * Math.sin( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+          camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
+          camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+          camera.updateMatrix();
+          camera.lookAt(scene.position);
+        }
+
+        mouse3D = projector.unprojectVector( new THREE.Vector3( ( event.clientX / renderer.domElement.width ) * 2 - 1, - ( event.clientY / renderer.domElement.height ) * 2 + 1, 0.5 ), camera );
+        ray.direction = mouse3D.subSelf( camera.position ).normalize();
+
+        render();
+
+      }
+
+      function onDocumentMouseUp( event ) {
+
+        event.preventDefault();
+
+        isMouseDown = false;
+
+        onMouseDownPosition.x = event.clientX - onMouseDownPosition.x;
+        onMouseDownPosition.y = event.clientY - onMouseDownPosition.y;
+
+        if ( onMouseDownPosition.length() > 5 ) {
+
+          return;
+
+        }
+
+        render();
+
+      }
+
+      function onDocumentMouseWheel( event ) {
+
+        radious -= event.wheelDeltaY;
+
+        camera.position.x = radious * Math.sin( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+        camera.position.y = radious * Math.sin( phi * Math.PI / 360 );
+        camera.position.z = radious * Math.cos( theta * Math.PI / 360 ) * Math.cos( phi * Math.PI / 360 );
+        camera.updateMatrix();
+
+        render();
+
+      }
+
+      function render() {
+
+        renderer.render( scene, camera );
+
+      }
+
+
+    </script>
+
+  </body>
+</html>
