@@ -3,7 +3,7 @@
 	<head>
 		<title>websnoed</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
 				font-family: Monospace;
@@ -19,26 +19,27 @@
     <script src="js/pmtpos.js"></script>
 
     <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="js/flot/jquery.flot.min.js"></script>
     <script type="text/javascript" src="/_utils/script/jquery.couch.js"></script>
 
 		<script>
-
+      // canvas
       var NPMTS = pmtpos.x.length;
       var PI2 = Math.PI * 2;
-			var container;
+      var container;
 
-			var camera, scene, renderer;
+      var camera, scene, renderer;
 
-			var cube;
+      var cube;
 
-			var targetRotation = 0;
-			var targetRotationOnMouseDown = 0;
+      var targetRotation = 0;
+      var targetRotationOnMouseDown = 0;
 
-			var mouseX = 0; mouseY = 0;
-			var mouseXOnMouseDown = 0;
+      var mouseX = 0; mouseY = 0;
+      var mouseXOnMouseDown = 0;
 
-			var windowHalfX = window.innerWidth / 2;
-			var windowHalfY = window.innerHeight / 2;
+      var windowHalfX = window.innerWidth / 2;
+      var windowHalfY = window.innerHeight / 2;
 
       var ray, projector, mouse3D, isMouseDown = false, onMouseDownPosition,
       radious = 375, theta = 45, onMouseDownTheta = 45, phi = 60, onMouseDownPhi = 60;
@@ -62,22 +63,35 @@
         program: surfaceProgram
       } );
 
-			init();
-			render();
+      init();
+      render();
 
-			function init() {
+      function init() {
 
-				container = document.createElement( 'div' );
+        container = document.createElement( 'div' );
         document.body.appendChild( container );
 
-        var info = document.createElement( 'div' );
-        info.style.position = 'absolute';
-        info.id = 'plot1';
-        info.style.top = '10px';
-        info.style.width = '100%';
-        info.style.color = 'white';
-        info.style.textAlign = 'center';
-        container.appendChild( info );
+        var charge_plot = document.createElement( 'div' );
+        charge_plot.style.position = 'absolute';
+        charge_plot.id = 'plot-charge';
+        charge_plot.style.top = '10px';
+        charge_plot.style.width = '300px';
+        charge_plot.style.height = '175px';
+        charge_plot.style.color = 'white';
+        charge_plot.style.background = 'black';
+        charge_plot.style.textAlign = 'center';
+        container.appendChild( charge_plot );
+
+        var time_plot = document.createElement( 'div' );
+        time_plot.style.position = 'absolute';
+        time_plot.id = 'plot-time';
+        time_plot.style.top = '185px';
+        time_plot.style.width = '300px';
+        time_plot.style.height = '175px';
+        time_plot.style.color = 'white';
+        time_plot.style.background = 'black';
+        time_plot.style.textAlign = 'center';
+        container.appendChild( time_plot );
 
         scene = new THREE.Scene();
 
@@ -138,6 +152,8 @@
             for (var i=0; i<pmts; i++) {
               particles[i].material = (data.q[i] > 0 ? hitMaterial : unhitMaterial);
             }
+            update('charge', data.qhist);
+            update('time', data.thist);
           }
         });
         render();
@@ -220,8 +236,24 @@
 
       }
 
+      // plot
+      var options = {
+        series: { shadowSize: 0 }, // drawing is faster without shadows
+        yaxis: { min: 0, max: 2000 },
+        xaxis: { min: 0, max: 4095 },
+        bars: {show:true}
+      };
 
+      var plots = {
+        charge: $.plot($("#plot-charge"), [{label: 'qhs', data: [[0,0],[4096,0]]}], options),
+        time: $.plot($("#plot-time"), [{label: 'time', data: [[0,0],[4096,0]]}], options),
+      };
+
+      function update(name, data) {
+        plots[name].setData( [{label: name, data: data}] );
+        plots[name].draw();
+      }
     </script>
-
   </body>
 </html>
+

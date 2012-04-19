@@ -9,8 +9,8 @@ couch = couchdb.Server('http://localhost:5984')
 db = couch['websnoed']
 
 while(True):
-    q = numpy.zeros((9500,))
-    t = numpy.zeros((9500,))
+    q = numpy.zeros((9500,), dtype=float)
+    t = numpy.zeros((9500,), dtype=float)
     for i in range(9500):
         if numpy.random.random() < 0.3:
             q[i] = 4095 * numpy.random.random()
@@ -23,6 +23,9 @@ while(True):
 
     data['t'] = list(t)
     data['q'] = list(q)
+
+    data['qhist'] = map((lambda x: map(float, x)), zip(*reversed(numpy.histogram(data['q']))))
+    data['thist'] = map((lambda x: map(float, x)), zip(*reversed(numpy.histogram(data['t']))))
 
     db.save(data)
 
