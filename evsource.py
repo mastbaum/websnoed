@@ -8,13 +8,16 @@ import numpy
 couch = couchdb.Server('http://localhost:5984')
 db = couch['websnoed']
 
+gtid = 0
+nhit = 0
 while(True):
     q = numpy.zeros((9500,), dtype=float)
     t = numpy.zeros((9500,), dtype=float)
     for i in range(9500):
-        if numpy.random.random() < 0.3:
+        if numpy.random.random() < 0.2:
             q[i] = 4095 * numpy.random.random()
             t[i] = 4095 * numpy.random.random()
+            nhit += 1
 
     if 'data' in db:
         data = db['data']
@@ -26,6 +29,12 @@ while(True):
 
     data['qhist'] = map((lambda x: map(float, x)), zip(*reversed(numpy.histogram(data['q']))))
     data['thist'] = map((lambda x: map(float, x)), zip(*reversed(numpy.histogram(data['t']))))
+
+    data['gtid'] = gtid
+    gtid += 1
+
+    data['nhit'] = nhit
+    nhit = 0
 
     db.save(data)
 

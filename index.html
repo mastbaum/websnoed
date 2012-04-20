@@ -6,9 +6,8 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
-				font-family: Monospace;
 				background-color: #000;
-				margin: 0px;
+				margin: 10px;
 				overflow: hidden;
 			}
 		</style>
@@ -71,10 +70,21 @@
         container = document.createElement( 'div' );
         document.body.appendChild( container );
 
+        var event_metadata = document.createElement( 'div' );
+        event_metadata.style.position = 'absolute';
+        event_metadata.id = 'event-meta';
+        event_metadata.style.top = '10px';
+        event_metadata.style.width = '300px';
+        event_metadata.style.height = '105px';
+        event_metadata.style.color = 'white';
+        event_metadata.style.background = '0xaaa';
+        event_metadata.innerHTML = '<strong>Event Data</strong><div id="meta-nhit"></div><div id="meta-gtid"></div>';
+        container.appendChild( event_metadata );
+
         var charge_plot = document.createElement( 'div' );
         charge_plot.style.position = 'absolute';
         charge_plot.id = 'plot-charge';
-        charge_plot.style.top = '10px';
+        charge_plot.style.top = '110px';
         charge_plot.style.width = '300px';
         charge_plot.style.height = '175px';
         charge_plot.style.color = 'white';
@@ -85,7 +95,7 @@
         var time_plot = document.createElement( 'div' );
         time_plot.style.position = 'absolute';
         time_plot.id = 'plot-time';
-        time_plot.style.top = '185px';
+        time_plot.style.top = '285px';
         time_plot.style.width = '300px';
         time_plot.style.height = '175px';
         time_plot.style.color = 'white';
@@ -154,10 +164,12 @@
             }
             update('charge', data.qhist);
             update('time', data.thist);
+            $("#meta-nhit").html('<strong>NHIT</strong>: ' + data.nhit);
+            $("#meta-gtid").html('<strong>GTID</strong>: ' + data.gtid);
           }
         });
         render();
-      }, 500);
+      }, 1000);
 
       //
       function onDocumentMouseDown( event ) {
