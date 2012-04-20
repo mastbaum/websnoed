@@ -6,3 +6,4 @@ websnoed uses [Three.js](http://mrdoob.github.com/three.js/) to render SNO+ even
 
 Event data is retrieved from a server as pre-parsed JSON.
 
+![Action Shot](https://github.com/mastbaum/websnoed/raw/master/doc/muon.jpg)
