@@ -27,6 +27,7 @@
       var PI2 = Math.PI * 2;
 
       var pmts = [];
+      var prevHits = new Array();
 
       var container, camera, scene, renderer, ray, projector, mouse3D;
       var isMouseDown = false, onMouseDownPosition, onMouseDownPhi = 60, onMouseDownTheta = 45;
@@ -49,6 +50,14 @@
         program: particleSurfaceProgram
       });
 
+      function getCCC(lcn) {
+        return {
+          'crate': (lcn >> 9) & ((1 << 5) - 1),
+          'card': (lcn >> 5) & ((1 << 4) - 1),
+          'channel': (lcn >> 0) & ((1 << 5) - 1)
+        }
+      }
+
       init();
       render();
 
@@ -67,6 +76,18 @@
         event_metadata.style.background = '0xaaa';
         event_metadata.innerHTML = '<div id="meta-nhit"></div><div id="meta-gtid"></div>';
         container.appendChild(event_metadata);
+
+        var crates = document.createElement('div');
+        crates.style.position = 'absolute';
+        crates.id = 'crates';
+        crates.style.top = '10px';
+        crates.style.left = String(window.innerWidth - 300) + 'px';
+        crates.style.width = '300px';
+        crates.style.height = '105px';
+        crates.style.color = 'white';
+        crates.style.background = '0xaaa';
+        crates.innerHTML = '<div id="crates"></div>';
+        container.appendChild(crates);
 
         var charge_plot = document.createElement('div');
         charge_plot.style.position = 'absolute';
@@ -89,6 +110,26 @@
         time_plot.style.background = 'black';
         time_plot.style.textAlign = 'center';
         container.appendChild(time_plot);
+
+        // crate view
+        var html = '<table style="font-size:4pt"><tr>';
+        for (var icrate=0; icrate<19; icrate++) {
+          html += '<td><table cellspacing="1px" cellpadding="1px">';
+          for (var ichan=0; ichan<32; ichan++) {
+            html += '<tr>'
+            for (var icard=0; icard<16; icard++) {
+              html += '<td style="height:1px;width:1px;background:#555555" id="channel-' + icrate + '_' + icard + '_' + ichan + '"></td>';
+            }
+            html += '</tr>';
+          }
+          html += '</table></td>';
+          if ((icrate+1) % 4 == 0) {
+            html += '</tr><tr>';
+          }
+        }
+        html += '</tr></table>';
+
+        $("#crates").append(html);
 
         // scene
         scene = new THREE.Scene();
@@ -125,15 +166,36 @@
       }
       
       // update event data periodically
-      // FIXME make this callback-based
+      // FIXME make this callback-based?
       setInterval(function() {
         $.couch.db('websnoed').openDoc('data', {
           success: function(data) {
             // detector
-            var npmts = data.t.length;
-            for (var i=0; i<npmts; i++) {
-              pmts[i].material = (data.q[i] > 0 ? hitMaterial : unhitMaterial);
+            var nhits = data.t.length;
+
+            var keep = new Array(prevHits.length);
+            for (var icurr=0; icurr<nhits; icurr++) {
+              for (var iprev=0; iprev<prevHits.length; iprev++) {
+                if (data.id[icurr] == prevHits[iprev]) {
+                  keep[iprev] = true;
+                }
+              }
+              pmts[data.id[icurr]].material = hitMaterial;
+              var ccc = getCCC(data.id[icurr]);
+              var channel_selector = "#channel-" + ccc.crate + '_' + ccc.card + '_' + ccc.channel;
+              $(channel_selector).css('background','red');
             }
+
+            for (var ikeep=0; ikeep<keep.length; ikeep++) {
+              if (!keep[ikeep]) {
+                pmts[prevHits[ikeep]].material = unhitMaterial;
+                var ccc = getCCC(prevHits[ikeep]);
+                var channel_selector = "#channel-" + ccc.crate + '_' + ccc.card + '_' + ccc.channel;
+                $(channel_selector).css('background','#555555');
+              }
+            }
+
+            prevHits = data.id;
 
             // plots
             update('charge', data.qhist);
@@ -145,7 +207,7 @@
           }
         });
         render();
-      }, 1000);
+      }, 5000);
 
       //
       function onDocumentMouseDown(event) {
@@ -207,7 +269,7 @@
       // plots
       var options = {
         series: { shadowSize: 0 }, // drawing is faster without shadows
-        yaxis: { min: 0, max: 2000 },
+        yaxis: { min: 0, max: 350 },
         xaxis: { min: 0, max: 4095 },
         bars: { show: true }
       };
