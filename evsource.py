@@ -19,6 +19,7 @@ for event in events[30:31]:
 
     db.save(event)
 
-    time.sleep(1.0)
+    time.sleep(0.5)
+
     #raw_input()
 

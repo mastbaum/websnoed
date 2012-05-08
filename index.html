@@ -66,15 +66,16 @@
         container = document.createElement('div');
         document.body.appendChild(container);
 
-        var event_metadata = document.createElement('div');
+        var event_metadata = document.createElement('span');
         event_metadata.style.position = 'absolute';
         event_metadata.id = 'event-meta';
         event_metadata.style.top = '10px';
-        event_metadata.style.width = '300px';
-        event_metadata.style.height = '105px';
+        //event_metadata.style.width = '300px';
+        //event_metadata.style.height = '105px';
         event_metadata.style.color = 'white';
-        event_metadata.style.background = '0xaaa';
-        event_metadata.innerHTML = '<div id="meta-nhit"></div><div id="meta-gtid"></div>';
+        event_metadata.style.background = 'rgba(1,1,1,0.8)';
+        event_metadata.style.border = 'solid 1px 0x55555';
+        event_metadata.innerHTML = '<span id="meta-nhit"></span><br/><span id="meta-gtid"></span>';
         container.appendChild(event_metadata);
 
         var crates = document.createElement('div');
@@ -85,7 +86,7 @@
         crates.style.width = '300px';
         crates.style.height = '105px';
         crates.style.color = 'white';
-        crates.style.background = '0xaaa';
+        crates.style.border = 'solid 1px 0x55555';
         crates.innerHTML = '<div id="crates"></div>';
         container.appendChild(crates);
 
@@ -96,7 +97,7 @@
         charge_plot.style.width = '300px';
         charge_plot.style.height = '175px';
         charge_plot.style.color = 'white';
-        charge_plot.style.background = 'black';
+        charge_plot.style.background = 'rgba(1,1,1,0.8)';
         charge_plot.style.textAlign = 'center';
         container.appendChild(charge_plot);
 
@@ -107,18 +108,18 @@
         time_plot.style.width = '300px';
         time_plot.style.height = '175px';
         time_plot.style.color = 'white';
-        time_plot.style.background = 'black';
+        time_plot.style.background = 'rgba(1,1,1,0.8)';
         time_plot.style.textAlign = 'center';
         container.appendChild(time_plot);
 
         // crate view
         var html = '<table style="font-size:4pt"><tr>';
         for (var icrate=0; icrate<19; icrate++) {
-          html += '<td><table cellspacing="1px" cellpadding="1px">';
+          html += '<td><table style="background:rgba(1,1,1,0.75);padding:2px" cellspacing="1px" cellpadding="1px">';
           for (var ichan=0; ichan<32; ichan++) {
             html += '<tr>'
             for (var icard=0; icard<16; icard++) {
-              html += '<td style="height:1px;width:1px;background:#555555" id="channel-' + icrate + '_' + icard + '_' + ichan + '"></td>';
+              html += '<td style="height:1px;width:1px;background:#333" id="channel-' + icrate + '_' + icard + '_' + ichan + '"></td>';
             }
             html += '</tr>';
           }
@@ -167,8 +168,10 @@
       
       // update event data periodically
       // FIXME make this callback-based?
-      setInterval(function() {
+      function loadHitData() {
         $.couch.db('websnoed').openDoc('data', {
+        // using $.ajax directly may be a little faster?
+        //$.ajax('/websnoed/data', {
           success: function(data) {
             // detector
             var nhits = data.t.length;
@@ -180,10 +183,14 @@
                   keep[iprev] = true;
                 }
               }
-              pmts[data.id[icurr]].material = hitMaterial;
+              var material = new THREE.ParticleCanvasMaterial({
+                color: getJetColorString(1.0*data.t[icurr]/4096, true),
+                program: particleSurfaceProgram
+              });
+              pmts[data.id[icurr]].material = material;
               var ccc = getCCC(data.id[icurr]);
               var channel_selector = "#channel-" + ccc.crate + '_' + ccc.card + '_' + ccc.channel;
-              $(channel_selector).css('background','red');
+              $(channel_selector).css('background',getJetColorString(1.0*data.t[icurr]/4096));
             }
 
             for (var ikeep=0; ikeep<keep.length; ikeep++) {
@@ -191,9 +198,12 @@
                 pmts[prevHits[ikeep]].material = unhitMaterial;
                 var ccc = getCCC(prevHits[ikeep]);
                 var channel_selector = "#channel-" + ccc.crate + '_' + ccc.card + '_' + ccc.channel;
-                $(channel_selector).css('background','#555555');
+                $(channel_selector).css('background','#333');
               }
             }
+            console.log('render');
+            render();
+            delete keep;
 
             prevHits = data.id;
 
@@ -206,8 +216,13 @@
             $("#meta-gtid").html('<strong>GTID</strong>: ' + data.gtid);
           }
         });
-        render();
-      }, 5000);
+      }
+  
+      loadHitData();
+
+      setInterval(function() {
+        loadHitData();
+      }, 500);
 
       //
       function onDocumentMouseDown(event) {
@@ -233,10 +248,13 @@
           camera.lookAt(scene.position);
         }
 
-        mouse3D = projector.unprojectVector(new THREE.Vector3((event.clientX / renderer.domElement.width) * 2 - 1, - (event.clientY / renderer.domElement.height) * 2 + 1, 0.5), camera);
+        var mouseV = new THREE.Vector3((event.clientX / renderer.domElement.width) * 2 - 1, - (event.clientY / renderer.domElement.height) * 2 + 1, 0.5);
+        mouse3D = projector.unprojectVector(mouseV, camera);
         ray.direction = mouse3D.subSelf(camera.position).normalize();
 
         render();
+
+        delete mouseV;
       }
 
       function onDocumentMouseUp(event) {
@@ -268,20 +286,48 @@
 
       // plots
       var options = {
-        series: { shadowSize: 0 }, // drawing is faster without shadows
+        //series: { shadowSize: 0 }, // drawing is faster without shadows
         yaxis: { min: 0, max: 350 },
         xaxis: { min: 0, max: 4095 },
         bars: { show: true }
       };
 
       var plots = {
-        charge: $.plot($("#plot-charge"), [{label: 'qhs', data: [[0,0],[4096,0]]}], options),
-        time: $.plot($("#plot-time"), [{label: 'time', data: [[0,0],[4096,0]]}], options),
+        charge: $.plot($("#plot-charge"), [{label: 'qhs', data: [[0,0],[4096,0]], color: '800'}], options),
+        time: $.plot($("#plot-time"), [{label: 'time', data: [[0,0],[4096,0]], color: '800'}], options),
       };
 
       function update(name, data) {
-        plots[name].setData([{label: name, data: data}]);
+        plots[name].setData([{label: name, data: data, color: '800'}]);
         plots[name].draw();
+      }
+    
+      function clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
+      }
+
+      function getJetColorString(val, hex) {
+        var red   = Math.floor(clamp(255 * Math.min(4 * val - 1.5, -4 * val + 4.5), 0, 255));
+        var green = Math.floor(clamp(255 * Math.min(4 * val - 0.5, -4 * val + 3.5), 0, 255));
+        var blue  = Math.floor(clamp(255 * Math.min(4 * val + 0.5, -4 * val + 2.5), 0, 255));
+
+        if (hex)
+          return rgbToHex(red, green, blue);
+
+        return 'rgb(' + red + ',' + green + ',' + blue + ')'
+      }
+
+      function rgbToHex(R,G,B) {
+        var s = toHex(R) + toHex(G) + toHex(B);
+        return '0x' + s;
+      }
+
+      function toHex(n) {
+        n = parseInt(n,10);
+        if (isNaN(n)) return "00";
+        n = Math.max(0,Math.min(n,255));
+        return "0123456789ABCDEF".charAt((n-n%16)/16)
+        + "0123456789ABCDEF".charAt(n%16);
       }
     </script>
   </body>

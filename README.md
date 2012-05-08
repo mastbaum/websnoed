@@ -8,7 +8,7 @@ Event data is retrieved from a server as pre-parsed JSON.
 
 Example (muon) event
 --------------------
-![Muon](https://github.com/mastbaum/websnoed/raw/master/doc/muon.jpg)
+![Muon](https://github.com/mastbaum/websnoed/raw/master/doc/muon.png)
 
-![Muon from inside](https://github.com/mastbaum/websnoed/raw/master/doc/muon-inside.jpg)
+![Muon from inside](https://github.com/mastbaum/websnoed/raw/master/doc/muon-inside.png)
 
