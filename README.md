@@ -10,5 +10,5 @@ Example (SNO muon) event
 --------------------
 ![Muon](https://github.com/mastbaum/websnoed/raw/master/doc/muon.png)
 
-![Muon from inside](https://github.com/mastbaum/websnoed/raw/master/doc/muon-inside.png)
+![Muon from inside](https://github.com/mastbaum/websnoed/raw/master/doc/muon_inside.png)
 
