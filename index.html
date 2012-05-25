@@ -142,6 +142,13 @@
         camera.lookAt(scene.position);
         scene.add(camera);
 
+        av = new THREE.Mesh( new THREE.SphereGeometry( 6005.0/50, 20, 20 ), new THREE.MeshBasicMaterial( { color: 0xaaaaff, opacity: 0.15 } ) );
+        scene.add( av );
+        avneck = new THREE.Mesh( new THREE.CylinderGeometry( 794.0/50, 794.0/50, 3900.0/50, 20, 1 ), new THREE.MeshBasicMaterial( { color: 0xaaaaff, opacity: 0.15 } ) );
+        avneck.position.z = (5900.0 + 3900.0/2) / 50;
+        avneck.rotation.x = Math.PI / 2;
+        scene.add( avneck );
+
         projector = new THREE.Projector();
         onMouseDownPosition = new THREE.Vector2();
         ray = new THREE.Ray(camera.position, null);
